@@ -67,7 +67,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Carta a schermo intero */
-  #modal { position: fixed; top: 0; left: 0; right: 0; height: var(--full, 100%); box-shadow: 0 300px 0 #000; background: #000; display: none; z-index: 10; touch-action: none; }
+  #modal { position: fixed; top: 0; left: 0; right: 0; height: var(--full, 100%);  background: #000; display: none; z-index: 10; touch-action: none; }
   #modal.open { display: block; }
   #bg { position: absolute; inset: -60px; background-size: cover; background-position: center; filter: blur(28px); transform: scale(1.1); }
   #shade { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
@@ -85,6 +85,7 @@
   /* Schermata iniziale */
   @font-face { font-family: 'Logo'; src: url(luckiest.ttf) format('truetype'); font-display: swap; }
   #splash { position: fixed; top: 0; left: 0; right: 0; height: calc(100% + var(--extra, 0px)); z-index: 30; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px 24px calc(24px + var(--extra, 0px)); transition: opacity .4s; }
+  html.splashing, html.splashing body { background: #000; }
   #splash.hide { opacity: 0; pointer-events: none; }
   #wall { position: absolute; inset: -40px; display: flex; gap: 10px; justify-content: center; filter: blur(4px); transform: scale(1.1); }
   #wall .col { flex: 1; max-width: 160px; display: flex; flex-direction: column; gap: 10px; animation: up 40s linear infinite; }
@@ -137,7 +138,7 @@
 // App aggiunta alla Home (iOS): l'altezza "fissa" può fermarsi sopra la barra home. Uso l'altezza vera dello schermo.
 (function () {
   const standalone = navigator.standalone || (matchMedia && matchMedia('(display-mode: standalone)').matches);
-  const set = () => { const st = document.documentElement.style; st.setProperty('--full', standalone ? Math.max(innerHeight, screen.height) + 'px' : '100%'); st.setProperty('--extra', standalone ? '300px' : '0px'); };
+  const set = () => { const st = document.documentElement.style; st.setProperty('--full', standalone ? innerHeight + 'px' : '100%'); st.setProperty('--extra', '0px'); };
   if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) document.addEventListener('DOMContentLoaded', () => { const h = document.getElementById('hint'); if (h) h.style.display = 'block'; });
   set(); addEventListener('resize', set); addEventListener('orientationchange', () => setTimeout(set, 200));
 })();
@@ -480,6 +481,7 @@ function setFilter(n) {
 
 /* ---------- schermata iniziale ---------- */
 document.body.classList.add('locked');
+document.documentElement.classList.add('splashing');
 function buildWall() {
   const wall = $('wall');
   const cols = Math.max(3, Math.min(6, Math.round(innerWidth / 130)));
@@ -505,7 +507,7 @@ function buildWall() {
     wall.appendChild(col);
   }
 }
-const VERSION = 'v10';
+const VERSION = 'v11';
 $('logo').addEventListener('click', () => {
   const r = $('splash').getBoundingClientRect();
   const sb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--full'));
@@ -515,7 +517,7 @@ $('logo').addEventListener('click', () => {
   h.textContent = `${VERSION} · standalone=${!!navigator.standalone} · inner=${innerWidth}x${innerHeight} · screen=${screen.width}x${screen.height} · full=${sb} · splash=${Math.round(r.height)} · safeBottom=${safe}`;
 });
 $('go').addEventListener('click', () => {
-  $('splash').classList.add('hide');
+  $('splash').classList.add('hide'); document.documentElement.classList.remove('splashing');
   document.body.classList.remove('locked');
   setTimeout(() => $('splash').remove(), 450);
 });
