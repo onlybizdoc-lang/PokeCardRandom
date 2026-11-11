@@ -69,15 +69,16 @@
   @font-face { font-family: 'Logo'; src: url(luckiest.ttf) format('truetype'); font-display: swap; }
   #splash { position: fixed; inset: 0; z-index: 30; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; transition: opacity .4s; }
   #splash.hide { opacity: 0; pointer-events: none; }
-  #wall { position: absolute; inset: -40px; display: flex; gap: 10px; justify-content: center; filter: blur(7px); transform: scale(1.1); }
+  #wall { position: absolute; inset: -40px; display: flex; gap: 10px; justify-content: center; filter: blur(4px); transform: scale(1.1); }
   #wall .col { flex: 1; max-width: 160px; display: flex; flex-direction: column; gap: 10px; animation: up 40s linear infinite; }
   #wall .col:nth-child(even) { animation-name: down; }
   #wall .col:nth-child(3n) { animation-duration: 52s; }
   #wall .col:nth-child(3n+1) { animation-duration: 34s; }
-  #wall img { width: 100%; aspect-ratio: 63 / 88; border-radius: 8px; display: block; background: var(--panel); }
+  #wall img { opacity: 0; transition: opacity .4s; width: 100%; aspect-ratio: 63 / 88; border-radius: 8px; display: block; background: var(--panel); }
   @keyframes up { to { transform: translateY(-50%); } }
   @keyframes down { from { transform: translateY(-50%); } to { transform: translateY(0); } }
-  #splash .shade { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+  #wall img.ok { opacity: 1; }
+  #splash .shade { position: absolute; inset: 0; background: rgba(0,0,0,.4); }
   #go { position: relative; border: 0; border-radius: 999px; padding: 18px 40px; font-size: 19px; font-weight: 800; background: var(--accent); color: var(--accent-text); cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
   #go:active { transform: scale(.96); }
   #go:disabled { opacity: .6; }
@@ -334,9 +335,21 @@ function buildWall() {
   for (let c = 0; c < cols; c++) {
     const col = document.createElement('div');
     col.className = 'col';
-    const imgs = [];
-    for (let k = 0; k < 8; k++) { const p = pick(); imgs.push(img(p, 'low')); }
-    for (const src of [...imgs, ...imgs]) { const im = new Image(); im.alt = ''; im.src = src; col.appendChild(im); }
+    const list = [];
+    let ready = 0;
+    const mk = () => {
+      const im = new Image(); im.alt = ''; im.decoding = 'async';
+      const load = () => { im.src = img(pick(), 'low'); };
+      im.onload = () => {
+        im.classList.add('ok');
+        // a carte tutte caricate, duplico la colonna per far girare l'animazione senza stacchi
+        if (++ready === 8) for (const o of list) { const d = new Image(); d.alt = ''; d.src = o.src; d.className = 'ok'; col.appendChild(d); }
+      };
+      im.onerror = load; // immagine mancante → un'altra carta reale
+      load();
+      return im;
+    };
+    for (let k = 0; k < 8; k++) { const im = mk(); list.push(im); col.appendChild(im); }
     col.style.animationDelay = (-Math.random() * 20) + 's';
     wall.appendChild(col);
   }
