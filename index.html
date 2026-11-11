@@ -50,7 +50,7 @@
   .tchip.on { color: var(--text); border-color: var(--rc, var(--accent)); background: color-mix(in srgb, var(--rc, var(--accent)) 22%, var(--panel)); }
   .tchip.all.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   .tchip.all::before { background: conic-gradient(#ff4fd8, #ffcb05, #3ecf6e, #3b9bff, #a463ff, #ff4fd8); }
-  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%); z-index: 8; background: rgba(0,0,0,.85); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%); z-index: 50; background: rgba(0,0,0,.85); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .25s; }
   #toast.on { opacity: 1; }
   #bar { position: fixed; top: 0; left: 0; right: 0; height: var(--full, 100%); z-index: 5; pointer-events: none; }
   #filters { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 84px); z-index: 5; display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px; padding: 0 12px; pointer-events: none; }
@@ -59,8 +59,12 @@
   .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   .chip:disabled { opacity: .45; }
   #status { text-align: center; color: var(--muted); font-size: 14px; margin: 24px 8px; }
-  #refresh { pointer-events: auto; position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 18px); border: 0; border-radius: 999px; padding: 16px 36px; font-size: 17px; font-weight: 700; background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 24px rgba(0,0,0,.45); cursor: pointer; display: flex; align-items: center; gap: 8px; }
-  #refresh:active { transform: translateX(-50%) scale(.96); }
+  #actions { pointer-events: auto; position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 18px); display: flex; justify-content: center; gap: 10px; padding: 0 12px; }
+  #refresh { border: 0; border-radius: 999px; padding: 16px 28px; font-size: 17px; font-weight: 700; background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 24px rgba(0,0,0,.45); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  #refresh:active, #savedBtn:active { transform: scale(.96); }
+  #savedBtn { border: 1.5px solid #343846; border-radius: 999px; padding: 16px 20px; font-size: 16px; font-weight: 700; background: var(--panel); color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,.45); cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  #savedBtn svg { width: 18px; height: 18px; }
+  #savedBtn .n { background: var(--accent); color: var(--accent-text); border-radius: 999px; font-size: 12px; padding: 2px 7px; }
   #refresh:disabled { opacity: .6; }
   #refresh svg { width: 20px; height: 20px; }
   #refresh.spin svg { animation: spin .6s linear; }
@@ -80,6 +84,16 @@
   #info a { color: var(--accent); font-size: 14px; display: inline-block; margin-top: 8px; }
   .top { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; transition: opacity .2s; z-index: 2; }
   .top span { font-size: 13px; color: #c4c8d0; background: rgba(255,255,255,.12); padding: 6px 10px; border-radius: 999px; }
+  .acts { display: flex; gap: 8px; align-items: center; }
+  #save { background: rgba(255,255,255,.15); color: #fff; border: 0; width: 42px; height: 42px; border-radius: 50%; font-size: 26px; line-height: 1; cursor: pointer; }
+  #save.on { background: var(--accent); color: var(--accent-text); font-size: 20px; font-weight: 800; }
+  #saved { position: fixed; top: 0; left: 0; right: 0; height: var(--full, 100%); z-index: 9; background: var(--bg); overflow-y: auto; display: none; padding: calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 30px); }
+  #saved.open { display: block; }
+  #saved .head { display: flex; align-items: center; justify-content: space-between; max-width: 720px; margin: 0 auto 12px; }
+  #saved h2 { margin: 0; font-size: 20px; }
+  #saved .back { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 999px; padding: 9px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  #savedGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 720px; margin: 0 auto; }
+  #savedEmpty { text-align: center; color: var(--muted); font-size: 15px; line-height: 1.5; margin: 80px 20px; }
   #close { background: rgba(255,255,255,.15); color: #fff; border: 0; width: 42px; height: 42px; border-radius: 50%; font-size: 24px; line-height: 1; cursor: pointer; }
 
   /* Schermata iniziale */
@@ -112,10 +126,19 @@
 
 <div id="bar">
   <div id="filters"></div>
+  <div id="actions">
   <button id="refresh" disabled>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
     Aggiorna
   </button>
+  <button id="savedBtn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>Carte Salvate <span class="n" id="savedN">0</span></button>
+  </div>
+</div>
+
+<div id="saved">
+  <div class="head"><h2>Carte Salvate</h2><button class="back" id="savedBack">Chiudi</button></div>
+  <div id="savedGrid"></div>
+  <div id="savedEmpty">Nessuna carta salvata.<br>Apri una carta e tocca <b>+</b> per salvarla.</div>
 </div>
 
 <div id="toast"></div>
@@ -123,7 +146,7 @@
 <div id="modal" role="dialog" aria-modal="true">
   <div id="bg"></div><div id="shade"></div>
   <div id="stage"><img id="big" alt="" draggable="false"></div>
-  <div class="top"><span id="pos"></span><button id="close" aria-label="Chiudi">×</button></div>
+  <div class="top"><span id="pos"></span><div class="acts"><button id="save" aria-label="Salva carta">+</button><button id="close" aria-label="Chiudi">×</button></div></div>
   <div id="info"></div>
 </div>
 
@@ -232,6 +255,23 @@ function paintTier(el, tier) {
   if (tier) el.classList.add('r-' + tier);
 }
 
+/* ---------- carte salvate ---------- */
+let savedList = [];
+try { savedList = (JSON.parse(localStorage.getItem('carte-salvate')) || []).filter(c => c && c.lang && c.id && c.path); } catch (e) {}
+const keyOf = c => c.lang + '/' + c.id;
+let savedKeys = new Set(savedList.map(keyOf));
+const isSaved = c => savedKeys.has(keyOf(c));
+function persistSaved() {
+  savedKeys = new Set(savedList.map(keyOf));
+  try { localStorage.setItem('carte-salvate', JSON.stringify(savedList)); } catch (e) { toast('Non riesco a salvare (memoria piena o bloccata)'); }
+  $('savedN').textContent = savedList.length;
+}
+function toggleSaved(c) {
+  if (isSaved(c)) savedList = savedList.filter(x => keyOf(x) !== keyOf(c));
+  else savedList.unshift({ lang: c.lang, id: c.id, path: c.path });
+  persistSaved();
+}
+
 /* ---------- estrazione casuale ---------- */
 const fpools = {};            // carte filtrate per rarità: fpools[lang] = [[id, percorso], ...]
 let tierActive = new Set();   // rarità scelte; vuoto = tutte
@@ -244,12 +284,16 @@ function rebuildBag() {
   for (let i = total - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
   bagPos = 0;
 }
-function pick() {
+function pick(skip = 0) {
   if (!bag || bagPos >= bag.length) rebuildBag();
   let i = bag[bagPos++];
   for (const lang of activeLangs()) {
     const pool = P()[lang];
-    if (i < pool.length) { const [id, path] = pool[i]; return { lang, id, path }; }
+    if (i < pool.length) {
+      const [id, path] = pool[i];
+      if (skip < 60 && savedKeys.has(lang + '/' + id)) return pick(skip + 1); // carte già salvate: non escono più
+      return { lang, id, path };
+    }
     i -= pool.length;
   }
 }
@@ -286,7 +330,7 @@ function deal() {
     im.onerror = () => { hand[slot] = pick(); show(); }; // immagine mancante → un'altra carta
     show();
     b.append(im, badge);
-    b.addEventListener('click', () => openCard(slot));
+    b.addEventListener('click', () => openCard(slot, hand));
     grid.appendChild(b);
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -298,24 +342,28 @@ let z = { s: 1, x: 0, y: 0 };
 function applyZoom() { big.style.transform = `translate(${z.x}px, ${z.y}px) scale(${z.s})`; }
 function resetZoom() { z = { s: 1, x: 0, y: 0 }; applyZoom(); }
 
-async function openCard(i) {
-  current = (i + N) % N;
-  const c = hand[current];
+let view = hand;   // elenco su cui scorre il visualizzatore (mano casuale o carte salvate)
+async function openCard(i, list) {
+  if (list) view = list;
+  if (!view.length) return;
+  current = (i + view.length) % view.length;
+  const c = view[current];
   resetZoom();
   modal.classList.add('open'); modal.classList.remove('clean');
   document.body.classList.add('locked');
-  pos.textContent = `${current + 1} / ${N} · ${LANGS[c.lang]}`;
+  pos.textContent = `${current + 1} / ${view.length} · ${LANGS[c.lang]}`;
+  setSaveBtn(c);
   big.src = img(c, 'low');
   $('bg').style.backgroundImage = `url("${img(c, 'low')}")`;
   const hi = new Image();
-  hi.onload = () => { if (hand[current] === c) big.src = hi.src; };
+  hi.onload = () => { if (view[current] === c) big.src = hi.src; };
   hi.src = img(c, 'high');
   info.innerHTML = '<div class="meta">…</div>';
   paintTier(big, null);
   try {
     const d = await getDetail(c);
     if (!d) throw 0;
-    if (hand[current] !== c) return;
+    if (view[current] !== c) return;
     paintTier(big, tierOf(d.rarity));
     const set = d.set || {};
     const tot = set.cardCount ? (set.cardCount.official || set.cardCount.total) : '';
@@ -324,9 +372,16 @@ async function openCard(i) {
       <div class="name">${esc(d.name)}</div>
       <div class="meta">${esc(set.name)} · ${esc(d.localId)}${tot ? '/' + esc(tot) : ''}${d.rarity ? ' · ' + esc(d.rarity) : ''}</div>
       <a href="https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${q}" target="_blank" rel="noopener">Cerca su Cardmarket →</a>`;
-  } catch (e) { if (hand[current] === c) info.innerHTML = ''; }
+  } catch (e) { if (view[current] === c) info.innerHTML = ''; }
 }
-function closeModal() { modal.classList.remove('open'); document.body.classList.remove('locked'); big.removeAttribute('src'); paintTier(big, null); $('bg').style.backgroundImage = ''; }
+function setSaveBtn(c) { const b = $('save'), on = isSaved(c); b.classList.toggle('on', on); b.textContent = on ? '✓' : '+'; b.setAttribute('aria-label', on ? 'Rimuovi dai salvati' : 'Salva carta'); }
+$('save').addEventListener('click', e => {
+  e.stopPropagation();
+  const c = view[current]; if (!c) return;
+  toggleSaved(c); setSaveBtn(c);
+  toast(isSaved(c) ? 'Carta salvata ✓ — non uscirà più tra le casuali' : 'Rimossa dai salvati');
+});
+function closeModal() { modal.classList.remove('open'); if (!$('saved').classList.contains('open')) document.body.classList.remove('locked'); if ($('saved').classList.contains('open')) renderSaved(); big.removeAttribute('src'); paintTier(big, null); $('bg').style.backgroundImage = ''; }
 $('close').addEventListener('click', e => { e.stopPropagation(); closeModal(); });
 document.addEventListener('keydown', e => {
   if (!modal.classList.contains('open')) return;
@@ -391,6 +446,31 @@ function endPointer(e) {
 modal.addEventListener('pointerup', endPointer);
 modal.addEventListener('pointercancel', endPointer);
 
+
+/* ---------- schermata carte salvate ---------- */
+function renderSaved() {
+  const g = $('savedGrid');
+  g.innerHTML = '';
+  $('savedEmpty').style.display = savedList.length ? 'none' : 'block';
+  savedList.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.className = 'card';
+    const im = new Image(); im.alt = ''; im.decoding = 'async';
+    im.onload = () => { im.classList.add('ok'); b.classList.add('loaded'); };
+    im.src = img(c, 'low');
+    const badge = document.createElement('span');
+    badge.className = 'lang'; badge.textContent = LANGS[c.lang] || '';
+    b.append(im, badge);
+    getDetail(c).then(d => paintTier(b, tierOf(d && d.rarity)));
+    b.addEventListener('click', () => openCard(i, savedList.slice()));
+    g.appendChild(b);
+  });
+}
+function openSaved() { renderSaved(); $('saved').classList.add('open'); $('saved').scrollTop = 0; document.body.classList.add('locked'); }
+function closeSaved() { $('saved').classList.remove('open'); document.body.classList.remove('locked'); }
+$('savedBtn').addEventListener('click', openSaved);
+$('savedBack').addEventListener('click', closeSaved);
+$('savedN').textContent = savedList.length;
 
 /* ---------- filtro rarità ---------- */
 try { tierActive = new Set((JSON.parse(localStorage.getItem('filtro-rarita')) || []).filter(t => RARITIES[t])); } catch (e) {}
@@ -512,7 +592,7 @@ function buildWall() {
     wall.appendChild(col);
   }
 }
-const VERSION = 'v12';
+const VERSION = 'v13';
 $('logo').addEventListener('click', () => {
   const r = $('splash').getBoundingClientRect();
   const sb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--full'));
