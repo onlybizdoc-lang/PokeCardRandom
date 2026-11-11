@@ -99,6 +99,8 @@
   #go { position: relative; border: 0; border-radius: 999px; padding: 18px 40px; font-size: 19px; font-weight: 800; background: var(--accent); color: var(--accent-text); cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
   #go:active { transform: scale(.96); }
   #go:disabled { opacity: .6; }
+  #hint { position: relative; max-width: 300px; margin: 6px 0 0; text-align: center; color: #c4c8d0; font-size: 12.5px; line-height: 1.45; display: none; }
+  #hint b { color: #fff; }
   #logo { position: relative; margin: 0; font-family: 'Logo', Impact, sans-serif; font-weight: 400; font-size: clamp(40px, 12vw, 88px); line-height: 1; text-align: center; color: #ffcb05; letter-spacing: 2px; -webkit-text-stroke: 8px #3b4cca; paint-order: stroke fill; text-shadow: 0 6px 0 #1f2a80, 0 10px 24px rgba(0,0,0,.6); }
 </style>
 </head>
@@ -128,6 +130,7 @@
   <div id="wall"></div><div class="shade"></div>
   <h1 id="logo">PokèRandom</h1>
   <button id="go" disabled>Carico le carte…</button>
+  <p id="hint">Per usarla a <b>schermo intero</b>: tocca Condividi → <b>Aggiungi alla schermata Home</b> e lascia attivo <b>«Apri come app web»</b>.</p>
 </div>
 
 <script>
@@ -135,6 +138,7 @@
 (function () {
   const standalone = navigator.standalone || (matchMedia && matchMedia('(display-mode: standalone)').matches);
   const set = () => document.documentElement.style.setProperty('--full', standalone ? Math.max(innerHeight, screen.height) + 'px' : '100%');
+  if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) document.addEventListener('DOMContentLoaded', () => { const h = document.getElementById('hint'); if (h) h.style.display = 'block'; });
   set(); addEventListener('resize', set); addEventListener('orientationchange', () => setTimeout(set, 200));
 })();
 const API = 'https://api.tcgdex.net/v2';
