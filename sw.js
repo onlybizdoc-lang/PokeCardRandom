@@ -1,5 +1,5 @@
 // Service worker minimo: rende l'app installabile e tiene in cache la "scocca" dell'app.
-const SHELL = 'shell-v6';
+const SHELL = 'shell-v7';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'luckiest.ttf'];
 
 self.addEventListener('install', e => {

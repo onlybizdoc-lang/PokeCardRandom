@@ -149,6 +149,9 @@ const LANGS = { 'en': 'EN', 'it': 'IT', 'ja': 'JP', 'zh-tw': 'CN' };
 const LANG_NAMES = { 'en': 'Inglese', 'it': 'Italiano', 'ja': 'Giapponese', 'zh-tw': 'Cinese' };
 const FLAGS = { 'en': '🇬🇧', 'it': '🇮🇹', 'ja': '🇯🇵', 'zh-tw': '🇨🇳' };
 const CACHE_DAYS = 7;
+// Escludo le carte del gioco Pokémon TCG Pocket (set A1, A2a, B1, P-A… e le loro rarità): solo carte fisiche
+const isPocket = id => /^(?:[AB]\d+[a-z]?|P-[A-Z])-/i.test(id);
+const POCKET_RARITY = /^(one|two|three|four) (diamond|star|shiny)$|^crown$/i;
 const N = 9;
 
 const $ = id => document.getElementById(id);
@@ -182,11 +185,11 @@ async function idbSet(k, v) {
 
 async function loadLang(lang) {
   const c = await idbGet(lang);
-  if (c && Date.now() - c.t < CACHE_DAYS * 864e5) return c.d;
+  if (c && Date.now() - c.t < CACHE_DAYS * 864e5) return c.d.filter(x => !isPocket(x[0]));
   const res = await fetch(`${API}/${lang}/cards`);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const prefix = `${ASSETS}${lang}/`;
-  const d = (await res.json()).filter(x => x.image).map(x => [x.id, x.image.replace(prefix, '')]);
+  const d = (await res.json()).filter(x => x.image && !isPocket(x.id)).map(x => [x.id, x.image.replace(prefix, '')]);
   idbSet(lang, { t: Date.now(), d });
   return d;
 }
@@ -194,12 +197,12 @@ async function loadLang(lang) {
 
 /* ---------- rarità → bordo ---------- */
 const RARITIES = {
-  common:   ['Common', 'One Diamond'],
-  uncommon: ['Uncommon', 'Two Diamond'],
-  rare:     ['Rare', 'Rare PRIME', 'Rare Shining', 'Black White Rare', 'Three Diamond', 'Character Rare', 'Pikachu Rare', 'Prism Star'],
-  holo:     ['Holo Rare', 'Rare Holo', 'Rare Holo LV.X', 'Double rare', 'Holo Rare V', 'Holo Rare VMAX', 'Holo Rare VSTAR', 'LEGEND', 'Triple Rare', 'Four Diamond', 'One Star', 'Character Super Rare'],
-  ultra:    ['Ultra Rare', 'Illustration rare', 'Shiny rare', 'Shiny rare V', 'Shiny rare VMAX', 'Shiny Ultra Rare', 'Radiant Rare', 'Amazing Rare', 'ACE SPEC Rare', 'Full Art Trainer', 'Classic Collection', 'Two Star', 'One Shiny', 'Futuristic Rare', 'RGB Rare', 'Mega Attack Rare'],
-  secret:   ['Secret Rare', 'Hyper rare', 'Special illustration rare', 'Three Star', 'Two Shiny', 'Crown', 'Mega Hyper Rare']
+  common:   ['Common'],
+  uncommon: ['Uncommon'],
+  rare:     ['Rare', 'Rare PRIME', 'Rare Shining', 'Black White Rare', 'Character Rare', 'Pikachu Rare', 'Prism Star'],
+  holo:     ['Holo Rare', 'Rare Holo', 'Rare Holo LV.X', 'Double rare', 'Holo Rare V', 'Holo Rare VMAX', 'Holo Rare VSTAR', 'LEGEND', 'Triple Rare', 'Character Super Rare'],
+  ultra:    ['Ultra Rare', 'Illustration rare', 'Shiny rare', 'Shiny rare V', 'Shiny rare VMAX', 'Shiny Ultra Rare', 'Radiant Rare', 'Amazing Rare', 'ACE SPEC Rare', 'Full Art Trainer', 'Classic Collection', 'Futuristic Rare', 'RGB Rare', 'Mega Attack Rare'],
+  secret:   ['Secret Rare', 'Hyper rare', 'Special illustration rare', 'Mega Hyper Rare']
 };
 const TIER_LABELS = { common: 'Comuni', uncommon: 'N.C.', rare: 'Rare', holo: 'Holo', ultra: 'Ultra', secret: 'Segrete' };
 const RARITY_TIER = {};
@@ -271,6 +274,8 @@ function deal() {
       paintTier(b, null);
       getDetail(c).then(d => {
         if (hand[slot] !== c) return;
+        // rete di sicurezza: carte Pocket mai mostrate
+        if (d && POCKET_RARITY.test(d.rarity || '') && tries < 40) { hand[slot] = pick(); show(tries + 1); return; }
         const t = tierOf(d && d.rarity);
         // rete di sicurezza: se la carta non è della rarità scelta, ne pesco un'altra
         if (d && tierActive.size && !tierActive.has(t) && tries < 40) { hand[slot] = pick(); show(tries + 1); return; }
@@ -408,7 +413,7 @@ async function loadFiltered(tiers) {
     const lists = await Promise.all(values.map(v => loadRarity(lang, v)));
     const prefix = `${ASSETS}${lang}/`;
     const seen = new Set(), d = [];
-    for (const l of lists) for (const x of l) if (x.image && !seen.has(x.id)) { seen.add(x.id); d.push([x.id, x.image.replace(prefix, '')]); }
+    for (const l of lists) for (const x of l) if (x.image && !isPocket(x.id) && !seen.has(x.id)) { seen.add(x.id); d.push([x.id, x.image.replace(prefix, '')]); }
     out[lang] = d.length > pools[lang].length * 0.9 ? pools[lang] : d;
   }));
   return out;
@@ -507,7 +512,7 @@ function buildWall() {
     wall.appendChild(col);
   }
 }
-const VERSION = 'v11';
+const VERSION = 'v12';
 $('logo').addEventListener('click', () => {
   const r = $('splash').getBoundingClientRect();
   const sb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--full'));
