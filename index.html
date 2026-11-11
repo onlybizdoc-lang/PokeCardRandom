@@ -52,6 +52,8 @@
   /* Carta a schermo intero */
   #modal { position: fixed; inset: 0; background: #000; display: none; z-index: 10; touch-action: none; }
   #modal.open { display: block; }
+  #bg { position: absolute; inset: -60px; background-size: cover; background-position: center; filter: blur(28px); transform: scale(1.1); }
+  #shade { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
   #stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px); }
   #big { max-width: 100%; max-height: 100%; border-radius: 16px; transform-origin: center; will-change: transform; user-select: none; -webkit-user-drag: none; }
   #info { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 16px calc(env(safe-area-inset-bottom) + 16px); background: linear-gradient(transparent, rgba(0,0,0,.85) 45%); text-align: center; transition: opacity .2s; }
@@ -75,6 +77,7 @@
 </button>
 
 <div id="modal" role="dialog" aria-modal="true">
+  <div id="bg"></div><div id="shade"></div>
   <div id="stage"><img id="big" alt="" draggable="false"></div>
   <div class="top"><span id="pos"></span><button id="close" aria-label="Chiudi">×</button></div>
   <div id="info"></div>
@@ -186,6 +189,7 @@ async function openCard(i) {
   document.body.classList.add('locked');
   pos.textContent = `${current + 1} / ${N} · ${LANGS[c.lang]}`;
   big.src = img(c, 'low');
+  $('bg').style.backgroundImage = `url("${img(c, 'low')}")`;
   const hi = new Image();
   hi.onload = () => { if (hand[current] === c) big.src = hi.src; };
   hi.src = img(c, 'high');
@@ -203,7 +207,7 @@ async function openCard(i) {
       <a href="https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${q}" target="_blank" rel="noopener">Cerca su Cardmarket →</a>`;
   } catch (e) { if (hand[current] === c) info.innerHTML = ''; }
 }
-function closeModal() { modal.classList.remove('open'); document.body.classList.remove('locked'); big.removeAttribute('src'); }
+function closeModal() { modal.classList.remove('open'); document.body.classList.remove('locked'); big.removeAttribute('src'); $('bg').style.backgroundImage = ''; }
 $('close').addEventListener('click', e => { e.stopPropagation(); closeModal(); });
 document.addEventListener('keydown', e => {
   if (!modal.classList.contains('open')) return;
