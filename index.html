@@ -43,6 +43,15 @@
   .card.loaded::after { display: none; }
   .lang { position: absolute; top: 4px; right: 4px; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 6px; background: rgba(0,0,0,.7); color: #fff; letter-spacing: .3px; pointer-events: none; }
   @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+  #tfilters { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 720px; margin: 0 auto; }
+  .tchip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid #343846; background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .tchip::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--rc, var(--muted)); }
+  .tchip.r-secret::before { background: linear-gradient(120deg, #ff4fd8, #ffcb05, #3be8ff); }
+  .tchip.on { border-color: var(--rc, var(--accent)); background: color-mix(in srgb, var(--rc, var(--accent)) 22%, var(--panel)); }
+  .tchip.all.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .tchip.all::before { display: none; }
+  #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%); z-index: 8; background: rgba(0,0,0,.85); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #toast.on { opacity: 1; }
   #filters { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 84px); z-index: 5; display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px; padding: 0 12px; pointer-events: none; }
   #filters .chip { pointer-events: auto; box-shadow: 0 2px 10px rgba(0,0,0,.45); }
   .chip { flex: none; border: 1px solid #343846; background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 14px; font-size: 20px; line-height: 1.2; font-weight: 600; cursor: pointer; }
@@ -93,6 +102,7 @@
 </style>
 </head>
 <body>
+<div id="tfilters"></div>
 <div id="filters"></div>
 <div id="grid"></div>
 <div id="status">Carico le carte…</div>
@@ -101,6 +111,8 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
   Aggiorna
 </button>
+
+<div id="toast"></div>
 
 <div id="modal" role="dialog" aria-modal="true">
   <div id="bg"></div><div id="shade"></div>
@@ -167,16 +179,27 @@ async function loadLang(lang) {
 
 
 /* ---------- rarità → bordo ---------- */
+const RARITIES = {
+  common:   ['Common', 'One Diamond'],
+  uncommon: ['Uncommon', 'Two Diamond'],
+  rare:     ['Rare', 'Rare PRIME', 'Rare Shining', 'Black White Rare', 'Three Diamond', 'Character Rare', 'Pikachu Rare', 'Prism Star'],
+  holo:     ['Holo Rare', 'Rare Holo', 'Rare Holo LV.X', 'Double rare', 'Holo Rare V', 'Holo Rare VMAX', 'Holo Rare VSTAR', 'LEGEND', 'Triple Rare', 'Four Diamond', 'One Star', 'Character Super Rare'],
+  ultra:    ['Ultra Rare', 'Illustration rare', 'Shiny rare', 'Shiny rare V', 'Shiny rare VMAX', 'Shiny Ultra Rare', 'Radiant Rare', 'Amazing Rare', 'ACE SPEC Rare', 'Full Art Trainer', 'Classic Collection', 'Two Star', 'One Shiny', 'Futuristic Rare', 'RGB Rare', 'Mega Attack Rare'],
+  secret:   ['Secret Rare', 'Hyper rare', 'Special illustration rare', 'Three Star', 'Two Shiny', 'Crown', 'Mega Hyper Rare']
+};
+const TIER_LABELS = { common: 'Comuni', uncommon: 'Non comuni', rare: 'Rare', holo: 'Holo', ultra: 'Ultra', secret: 'Segrete' };
+const RARITY_TIER = {};
+for (const t in RARITIES) for (const v of RARITIES[t]) RARITY_TIER[v.toLowerCase()] = t;
 function tierOf(r) {
   const s = String(r || '').toLowerCase().trim();
   if (!s || s === 'none') return null;
-  const exact = { hr: 'secret', sar: 'secret', ur: 'ultra', ar: 'ultra', ssr: 'ultra', sr: 'holo', rr: 'holo', rrr: 'holo', r: 'rare', u: 'uncommon', c: 'common' };
-  if (exact[s]) return exact[s];
-  if (/secret|hyper|segret|crown|special illustration|special art|シークレット|スペシャルアート|ハイパー|隱藏|隐藏|王冠/.test(s)) return 'secret';
-  if (/ultra|illustration|art rare|アート|ウルトラ|shiny|radiant|amazing|ace spec|イラスト|超/.test(s)) return 'ultra';
-  if (/holo|double|doppia|ダブル|スーパー|super|mega|vmax|vstar|\bex\b|\bgx\b|\bv\b|ホロ|雙/.test(s)) return 'holo';
-  if (/rare|rara|レア|稀有|珍/.test(s)) return 'rare';
-  if (/uncommon|non comune|アンコモン|非普通/.test(s)) return 'uncommon';
+  if (RARITY_TIER[s]) return RARITY_TIER[s];
+  // riserva: parole chiave (anche per rarità non in elenco o tradotte)
+  if (/secret|hyper|segret|crown|special illustration|シークレット|スペシャルアート|ハイパー/.test(s)) return 'secret';
+  if (/ultra|illustration|art rare|アート|ウルトラ|shiny|radiant|amazing|ace spec/.test(s)) return 'ultra';
+  if (/holo|double|doppia|ダブル|スーパー|super|mega|vmax|vstar|ホロ/.test(s)) return 'holo';
+  if (/rare|rara|レア|稀有/.test(s)) return 'rare';
+  if (/uncommon|non comune|アンコモン/.test(s)) return 'uncommon';
   if (/common|comune|コモン|普通/.test(s)) return 'common';
   return null;
 }
@@ -193,9 +216,12 @@ function paintTier(el, tier) {
 }
 
 /* ---------- estrazione casuale ---------- */
-const activeLangs = () => Object.keys(pools).filter(l => !active.size || active.has(l));
+const fpools = {};            // carte filtrate per rarità: fpools[lang] = [[id, percorso], ...]
+let tierActive = new Set();   // rarità scelte; vuoto = tutte
+const P = () => tierActive.size ? fpools : pools;
+const activeLangs = () => Object.keys(P()).filter(l => !active.size || active.has(l));
 function rebuildBag() {
-  total = activeLangs().reduce((s, l) => s + pools[l].length, 0);
+  total = activeLangs().reduce((s, l) => s + P()[l].length, 0);
   bag = new Uint32Array(total);
   for (let i = 0; i < total; i++) bag[i] = i;
   for (let i = total - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
@@ -205,8 +231,9 @@ function pick() {
   if (!bag || bagPos >= bag.length) rebuildBag();
   let i = bag[bagPos++];
   for (const lang of activeLangs()) {
-    if (i < pools[lang].length) { const [id, path] = pools[lang][i]; return { lang, id, path }; }
-    i -= pools[lang].length;
+    const pool = P()[lang];
+    if (i < pool.length) { const [id, path] = pool[i]; return { lang, id, path }; }
+    i -= pool.length;
   }
 }
 const img = (c, q) => `${ASSETS}${c.lang}/${c.path}/${q}.webp`;
@@ -224,11 +251,17 @@ function deal() {
     badge.className = 'lang';
     const im = new Image();
     im.alt = ''; im.decoding = 'async';
-    const show = () => {
+    const show = (tries = 0) => {
       const c = hand[slot];
       badge.textContent = LANGS[c.lang]; im.src = img(c, 'low');
       paintTier(b, null);
-      getDetail(c).then(d => { if (hand[slot] === c) paintTier(b, tierOf(d && d.rarity)); });
+      getDetail(c).then(d => {
+        if (hand[slot] !== c) return;
+        const t = tierOf(d && d.rarity);
+        // rete di sicurezza: se la carta non è della rarità scelta, ne pesco un'altra
+        if (d && tierActive.size && !tierActive.has(t) && tries < 40) { hand[slot] = pick(); show(tries + 1); return; }
+        paintTier(b, t);
+      });
     };
     im.onload = () => { im.classList.add('ok'); b.classList.add('loaded'); };
     im.onerror = () => { hand[slot] = pick(); show(); }; // immagine mancante → un'altra carta
@@ -339,6 +372,70 @@ function endPointer(e) {
 modal.addEventListener('pointerup', endPointer);
 modal.addEventListener('pointercancel', endPointer);
 
+
+/* ---------- filtro rarità ---------- */
+try { tierActive = new Set((JSON.parse(localStorage.getItem('filtro-rarita')) || []).filter(t => RARITIES[t])); } catch (e) {}
+const listCache = new Map();
+async function loadRarity(lang, value) {
+  const k = lang + '|' + value;
+  if (!listCache.has(k)) {
+    listCache.set(k, fetch(`${API}/${lang}/cards?rarity=eq:${encodeURIComponent(value)}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(a => Array.isArray(a) ? a : [])
+      .catch(() => { listCache.delete(k); return []; }));
+  }
+  return listCache.get(k);
+}
+// costruisce fpools per le rarità scelte; se il filtro dell'API non risponde come previsto, ripiega su tutte le carte (la rete di sicurezza in show() fa il resto)
+async function loadFiltered(tiers) {
+  const out = {};
+  await Promise.all(Object.keys(pools).map(async lang => {
+    const values = [...tiers].flatMap(t => RARITIES[t]);
+    const lists = await Promise.all(values.map(v => loadRarity(lang, v)));
+    const prefix = `${ASSETS}${lang}/`;
+    const seen = new Set(), d = [];
+    for (const l of lists) for (const x of l) if (x.image && !seen.has(x.id)) { seen.add(x.id); d.push([x.id, x.image.replace(prefix, '')]); }
+    out[lang] = d.length > pools[lang].length * 0.9 ? pools[lang] : d;
+  }));
+  return out;
+}
+let toastTimer;
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2200); }
+let tierToken = 0;
+async function setTierFilter(n) {
+  const token = ++tierToken;
+  if (n.size) toast('Cerco le carte…');
+  const f = n.size ? await loadFiltered(n) : null;
+  if (token !== tierToken) return;
+  const prev = tierActive, prevPools = { ...fpools };
+  tierActive = n;
+  if (f) { for (const l in fpools) delete fpools[l]; Object.assign(fpools, f); }
+  bag = null; updateCount();
+  if (n.size && !total) { tierActive = prev; for (const l in fpools) delete fpools[l]; Object.assign(fpools, prevPools); bag = null; updateCount(); toast('Nessuna carta con questi filtri'); return; }
+  try { localStorage.setItem('filtro-rarita', JSON.stringify([...tierActive])); } catch (e) {}
+  rebuildBag(); renderTierFilters();
+  if (n.size) $('toast').classList.remove('on');
+  if (total) deal();
+}
+function renderTierFilters() {
+  const f = $('tfilters');
+  f.innerHTML = '';
+  const mk = (cls, label, on, onClick) => {
+    const b = document.createElement('button');
+    b.className = 'tchip ' + cls + (on ? ' on' : '');
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    f.appendChild(b);
+  };
+  mk('all', 'Tutte', !tierActive.size, () => setTierFilter(new Set()));
+  for (const t in RARITIES) mk('r-' + t, TIER_LABELS[t], tierActive.has(t), () => {
+    const n = new Set(tierActive);
+    n.has(t) ? n.delete(t) : n.add(t);
+    if (n.size === Object.keys(RARITIES).length) n.clear();
+    setTierFilter(n);
+  });
+}
+
 /* ---------- filtro lingua ---------- */
 try { active = new Set(JSON.parse(localStorage.getItem('filtro-lingue')) || []); } catch (e) {}
 function renderFilters() {
@@ -403,9 +500,9 @@ $('go').addEventListener('click', () => {
 
 /* ---------- avvio ---------- */
 function updateCount(loading) {
-  total = activeLangs().reduce((s, l) => s + pools[l].length, 0);
+  total = activeLangs().reduce((s, l) => s + P()[l].length, 0);
 }
-renderFilters();
+renderFilters(); renderTierFilters();
 btn.addEventListener('click', deal);
 
 (async () => {
@@ -421,8 +518,13 @@ btn.addEventListener('click', deal);
   }));
   // distribuisci solo quando tutte le lingue sono arrivate, così la prima mano è davvero mista
   if (!total && active.size) { active = new Set(); updateCount(); renderFilters(); }
+  if (tierActive.size && Object.keys(pools).length) {
+    Object.assign(fpools, await loadFiltered(tierActive));
+    updateCount();
+    if (!total) { tierActive = new Set(); try { localStorage.removeItem('filtro-rarita'); } catch (e) {} bag = null; updateCount(); renderTierFilters(); }
+  }
   if (total) { started = true; statusEl.remove(); btn.disabled = false; deal(); buildWall(); $('go').disabled = false; $('go').textContent = 'Scopri le carte'; }
-  if (!started) $('go').textContent = 'Errore di rete'; statusEl.textContent = 'Non riesco a caricare le carte. Controlla la connessione e riapri l’app.';
+  if (!started) { $('go').textContent = 'Errore di rete'; statusEl.textContent = 'Non riesco a caricare le carte. Controlla la connessione e riapri l’app.'; }
 })();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
