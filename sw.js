@@ -1,5 +1,5 @@
 // Service worker minimo: rende l'app installabile e tiene in cache la "scocca" dell'app.
-const SHELL = 'shell-v1';
+const SHELL = 'shell-v2';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -17,7 +17,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then(r => { const copy = r.clone(); caches.open(SHELL).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request))
   );
