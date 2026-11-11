@@ -43,13 +43,13 @@
   .card.loaded::after { display: none; }
   .lang { position: absolute; top: 4px; right: 4px; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 6px; background: rgba(0,0,0,.7); color: #fff; letter-spacing: .3px; pointer-events: none; }
   @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
-  #tfilters { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 720px; margin: 0 auto; }
-  .tchip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid #343846; background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
-  .tchip::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--rc, var(--muted)); }
+  #tfilters { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; max-width: 520px; margin: 0 auto; width: 100%; }
+  .tchip { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; border: 1.5px solid #343846; background: var(--panel); color: var(--muted); border-radius: 12px; padding: 8px 1px 7px; font-size: 9.5px; letter-spacing: -.1px; font-weight: 700; line-height: 1; white-space: nowrap; cursor: pointer; }
+  .tchip::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--rc, var(--muted)); }
   .tchip.r-secret::before { background: linear-gradient(120deg, #ff4fd8, #ffcb05, #3be8ff); }
-  .tchip.on { border-color: var(--rc, var(--accent)); background: color-mix(in srgb, var(--rc, var(--accent)) 22%, var(--panel)); }
+  .tchip.on { color: var(--text); border-color: var(--rc, var(--accent)); background: color-mix(in srgb, var(--rc, var(--accent)) 22%, var(--panel)); }
   .tchip.all.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-  .tchip.all::before { display: none; }
+  .tchip.all::before { background: conic-gradient(#ff4fd8, #ffcb05, #3ecf6e, #3b9bff, #a463ff, #ff4fd8); }
   #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%); z-index: 8; background: rgba(0,0,0,.85); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .25s; }
   #toast.on { opacity: 1; }
   #filters { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 84px); z-index: 5; display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px; padding: 0 12px; pointer-events: none; }
@@ -187,7 +187,7 @@ const RARITIES = {
   ultra:    ['Ultra Rare', 'Illustration rare', 'Shiny rare', 'Shiny rare V', 'Shiny rare VMAX', 'Shiny Ultra Rare', 'Radiant Rare', 'Amazing Rare', 'ACE SPEC Rare', 'Full Art Trainer', 'Classic Collection', 'Two Star', 'One Shiny', 'Futuristic Rare', 'RGB Rare', 'Mega Attack Rare'],
   secret:   ['Secret Rare', 'Hyper rare', 'Special illustration rare', 'Three Star', 'Two Shiny', 'Crown', 'Mega Hyper Rare']
 };
-const TIER_LABELS = { common: 'Comuni', uncommon: 'Non comuni', rare: 'Rare', holo: 'Holo', ultra: 'Ultra', secret: 'Segrete' };
+const TIER_LABELS = { common: 'Comuni', uncommon: 'Non com.', rare: 'Rare', holo: 'Holo', ultra: 'Ultra', secret: 'Segrete' };
 const RARITY_TIER = {};
 for (const t in RARITIES) for (const v of RARITIES[t]) RARITY_TIER[v.toLowerCase()] = t;
 function tierOf(r) {
