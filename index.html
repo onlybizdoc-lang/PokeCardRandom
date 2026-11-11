@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Carte Random">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" href="icon-192.png">
+<title>Carte Random</title>
+<style>
+  :root {
+    --bg: #14161c;
+    --panel: #1d2029;
+    --text: #f2f3f5;
+    --muted: #9aa0ad;
+    --accent: #ffcb05;
+    --accent-text: #1a1a1a;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { min-height: 100dvh; padding: calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 96px); }
+  body.locked { overflow: hidden; }
+  header { display: flex; align-items: baseline; justify-content: flex-end; margin: 0 2px 8px; max-width: 720px; margin-inline: auto; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
+  #count { font-size: 12px; color: var(--muted); text-align: right; }
+  #grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 720px; margin: 0 auto; }
+  .card { position: relative; aspect-ratio: 63 / 88; border-radius: var(--radius); background: var(--panel); overflow: hidden; border: 0; padding: 0; cursor: pointer; }
+  .card img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .25s; }
+  .card img.ok { opacity: 1; }
+  .card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.06) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 1.2s infinite; pointer-events: none; }
+  .card.loaded::after { display: none; }
+  .lang { position: absolute; top: 4px; right: 4px; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 6px; background: rgba(0,0,0,.7); color: #fff; letter-spacing: .3px; pointer-events: none; }
+  @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+  #filters { display: flex; flex-wrap: wrap; gap: 6px; max-width: 720px; margin: 0 auto 12px; padding: 0 2px; }
+  .chip { flex: none; border: 1px solid #343846; background: var(--panel); color: var(--text); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .chip:disabled { opacity: .45; }
+  #status { text-align: center; color: var(--muted); font-size: 14px; margin: 24px 8px; }
+  #refresh { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 18px); border: 0; border-radius: 999px; padding: 16px 36px; font-size: 17px; font-weight: 700; background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 24px rgba(0,0,0,.45); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  #refresh:active { transform: translateX(-50%) scale(.96); }
+  #refresh:disabled { opacity: .6; }
+  #refresh svg { width: 20px; height: 20px; }
+  #refresh.spin svg { animation: spin .6s linear; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Carta a schermo intero */
+  #modal { position: fixed; inset: 0; background: #000; display: none; z-index: 10; touch-action: none; }
+  #modal.open { display: block; }
+  #stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px); }
+  #big { max-width: 100%; max-height: 100%; border-radius: 16px; transform-origin: center; will-change: transform; user-select: none; -webkit-user-drag: none; }
+  #info { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 16px calc(env(safe-area-inset-bottom) + 16px); background: linear-gradient(transparent, rgba(0,0,0,.85) 45%); text-align: center; transition: opacity .2s; }
+  #modal.clean #info, #modal.clean .top { opacity: 0; pointer-events: none; }
+  #info .name { font-size: 20px; font-weight: 700; }
+  #info .meta { font-size: 14px; color: #c4c8d0; margin-top: 4px; line-height: 1.5; }
+  #info a { color: var(--accent); font-size: 14px; display: inline-block; margin-top: 8px; }
+  .top { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; transition: opacity .2s; z-index: 2; }
+  .top span { font-size: 13px; color: #c4c8d0; background: rgba(255,255,255,.12); padding: 6px 10px; border-radius: 999px; }
+  #close { background: rgba(255,255,255,.15); color: #fff; border: 0; width: 42px; height: 42px; border-radius: 50%; font-size: 24px; line-height: 1; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="filters"></div>
+<div id="grid"></div>
+<div id="status">Carico le carte…</div>
+
+<button id="refresh" disabled>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+  Aggiorna
+</button>
+
+<div id="modal" role="dialog" aria-modal="true">
+  <div id="stage"><img id="big" alt="" draggable="false"></div>
+  <div class="top"><span id="pos"></span><button id="close" aria-label="Chiudi">×</button></div>
+  <div id="info"></div>
+</div>
+
+<script>
+const API = 'https://api.tcgdex.net/v2';
+const ASSETS = 'https://assets.tcgdex.net/';
+// Lingue incluse (il cinese di TCGdex con immagini è quello tradizionale)
+const LANGS = { 'en': 'EN', 'it': 'IT', 'ja': 'JP', 'zh-tw': 'CN' };
+const LANG_NAMES = { 'en': 'Inglese', 'it': 'Italiano', 'ja': 'Giapponese', 'zh-tw': 'Cinese' };
+const CACHE_DAYS = 7;
+const N = 9;
+
+const $ = id => document.getElementById(id);
+const grid = $('grid'), statusEl = $('status'), btn = $('refresh');
+const modal = $('modal'), big = $('big'), info = $('info'), pos = $('pos');
+
+// pools[lang] = [[id, percorsoImmagine], ...]
+const pools = {};
+let total = 0;
+let bag = null, bagPos = 0;
+let hand = [];      // le 9 carte mostrate
+let current = 0;    // carta aperta a schermo intero
+let active = new Set(); // lingue scelte nel filtro; vuoto = tutte
+
+/* ---------- archivio locale (IndexedDB) ---------- */
+function db() {
+  return new Promise((ok, ko) => {
+    const r = indexedDB.open('carte', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('langs');
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => ko(r.error);
+  });
+}
+async function idbGet(k) {
+  try { const d = await db(); return await new Promise(ok => { const r = d.transaction('langs').objectStore('langs').get(k); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); }); }
+  catch (e) { return null; }
+}
+async function idbSet(k, v) {
+  try { const d = await db(); d.transaction('langs', 'readwrite').objectStore('langs').put(v, k); } catch (e) {}
+}
+
+async function loadLang(lang) {
+  const c = await idbGet(lang);
+  if (c && Date.now() - c.t < CACHE_DAYS * 864e5) return c.d;
+  const res = await fetch(`${API}/${lang}/cards`);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const prefix = `${ASSETS}${lang}/`;
+  const d = (await res.json()).filter(x => x.image).map(x => [x.id, x.image.replace(prefix, '')]);
+  idbSet(lang, { t: Date.now(), d });
+  return d;
+}
+
+/* ---------- estrazione casuale ---------- */
+const activeLangs = () => Object.keys(pools).filter(l => !active.size || active.has(l));
+function rebuildBag() {
+  total = activeLangs().reduce((s, l) => s + pools[l].length, 0);
+  bag = new Uint32Array(total);
+  for (let i = 0; i < total; i++) bag[i] = i;
+  for (let i = total - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
+  bagPos = 0;
+}
+function pick() {
+  if (!bag || bagPos >= bag.length) rebuildBag();
+  let i = bag[bagPos++];
+  for (const lang of activeLangs()) {
+    if (i < pools[lang].length) { const [id, path] = pools[lang][i]; return { lang, id, path }; }
+    i -= pools[lang].length;
+  }
+}
+const img = (c, q) => `${ASSETS}${c.lang}/${c.path}/${q}.webp`;
+
+function deal() {
+  btn.classList.remove('spin'); void btn.offsetWidth; btn.classList.add('spin');
+  grid.innerHTML = '';
+  hand = [];
+  for (let k = 0; k < N; k++) {
+    const slot = k;
+    hand[slot] = pick();
+    const b = document.createElement('button');
+    b.className = 'card';
+    const badge = document.createElement('span');
+    badge.className = 'lang';
+    const im = new Image();
+    im.alt = ''; im.decoding = 'async';
+    const show = () => { badge.textContent = LANGS[hand[slot].lang]; im.src = img(hand[slot], 'low'); };
+    im.onload = () => { im.classList.add('ok'); b.classList.add('loaded'); };
+    im.onerror = () => { hand[slot] = pick(); show(); }; // immagine mancante → un'altra carta
+    show();
+    b.append(im, badge);
+    b.addEventListener('click', () => openCard(slot));
+    grid.appendChild(b);
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ---------- schermo intero ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+let z = { s: 1, x: 0, y: 0 };
+function applyZoom() { big.style.transform = `translate(${z.x}px, ${z.y}px) scale(${z.s})`; }
+function resetZoom() { z = { s: 1, x: 0, y: 0 }; applyZoom(); }
+
+async function openCard(i) {
+  current = (i + N) % N;
+  const c = hand[current];
+  resetZoom();
+  modal.classList.add('open'); modal.classList.remove('clean');
+  document.body.classList.add('locked');
+  pos.textContent = `${current + 1} / ${N} · ${LANGS[c.lang]}`;
+  big.src = img(c, 'low');
+  const hi = new Image();
+  hi.onload = () => { if (hand[current] === c) big.src = hi.src; };
+  hi.src = img(c, 'high');
+  info.innerHTML = '<div class="meta">…</div>';
+  try {
+    const r = await fetch(`${API}/${c.lang}/cards/${encodeURIComponent(c.id)}`);
+    const d = await r.json();
+    if (hand[current] !== c) return;
+    const set = d.set || {};
+    const tot = set.cardCount ? (set.cardCount.official || set.cardCount.total) : '';
+    const q = encodeURIComponent(`${d.name} ${set.name || ''}`);
+    info.innerHTML = `
+      <div class="name">${esc(d.name)}</div>
+      <div class="meta">${esc(set.name)} · ${esc(d.localId)}${tot ? '/' + esc(tot) : ''}${d.rarity ? ' · ' + esc(d.rarity) : ''}</div>
+      <a href="https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${q}" target="_blank" rel="noopener">Cerca su Cardmarket →</a>`;
+  } catch (e) { if (hand[current] === c) info.innerHTML = ''; }
+}
+function closeModal() { modal.classList.remove('open'); document.body.classList.remove('locked'); big.removeAttribute('src'); }
+$('close').addEventListener('click', e => { e.stopPropagation(); closeModal(); });
+document.addEventListener('keydown', e => {
+  if (!modal.classList.contains('open')) return;
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'ArrowRight') openCard(current + 1);
+  if (e.key === 'ArrowLeft') openCard(current - 1);
+});
+
+// Gesti: tocco = mostra/nascondi info, doppio tocco = zoom, pizzico = zoom,
+// trascina = sposta (se ingrandita) o cambia carta (scorri a destra/sinistra), scorri giù = chiudi
+const pts = new Map();
+let start = null, pinch = null, lastTap = 0, moved = false;
+modal.addEventListener('pointerdown', e => {
+  if (e.target.closest('a, button')) return;
+  modal.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  moved = false;
+  if (pts.size === 1) start = { x: e.clientX, y: e.clientY, zx: z.x, zy: z.y, t: Date.now() };
+  if (pts.size === 2) {
+    const [a, b] = [...pts.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: z.s };
+  }
+});
+modal.addEventListener('pointermove', e => {
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pts.size === 2 && pinch) {
+    const [a, b] = [...pts.values()];
+    z.s = Math.min(5, Math.max(1, pinch.s * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d));
+    if (z.s === 1) { z.x = 0; z.y = 0; }
+    moved = true; applyZoom();
+  } else if (pts.size === 1 && start) {
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) moved = true;
+    if (z.s > 1) { z.x = start.zx + dx; z.y = start.zy + dy; applyZoom(); }
+    else { big.style.transform = `translate(${dx}px, ${Math.max(0, dy)}px)`; }
+  }
+});
+function endPointer(e) {
+  if (!pts.has(e.pointerId)) return;
+  pts.delete(e.pointerId);
+  if (pts.size === 1) { pinch = null; const [p] = [...pts.values()]; start = { x: p.x, y: p.y, zx: z.x, zy: z.y, t: Date.now() }; return; }
+  if (pts.size > 0 || !start) return;
+  const dx = e.clientX - start.x, dy = e.clientY - start.y;
+  if (!moved) {
+    const now = Date.now();
+    if (now - lastTap < 300) { // doppio tocco
+      if (z.s > 1) resetZoom(); else { z.s = 2.5; applyZoom(); }
+      lastTap = 0;
+    } else {
+      lastTap = now;
+      setTimeout(() => { if (lastTap === now) modal.classList.toggle('clean'); }, 300);
+    }
+  } else if (z.s === 1) {
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy)) openCard(current + 1);
+    else if (dx > 60 && Math.abs(dx) > Math.abs(dy)) openCard(current - 1);
+    else if (dy > 100) closeModal();
+    else applyZoom();
+  }
+  start = null; pinch = null;
+}
+modal.addEventListener('pointerup', endPointer);
+modal.addEventListener('pointercancel', endPointer);
+
+/* ---------- filtro lingua ---------- */
+try { active = new Set(JSON.parse(localStorage.getItem('filtro-lingue')) || []); } catch (e) {}
+function renderFilters() {
+  const f = $('filters');
+  f.innerHTML = '';
+  const mk = (label, on, onClick, disabled) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (on ? ' on' : '');
+    b.textContent = label; b.disabled = !!disabled;
+    b.addEventListener('click', onClick);
+    f.appendChild(b);
+  };
+  mk('Tutte le lingue', !active.size, () => setFilter(new Set()));
+  for (const l in LANGS) mk(LANG_NAMES[l], active.has(l), () => {
+    const n = new Set(active);
+    n.has(l) ? n.delete(l) : n.add(l);
+    if (n.size === Object.keys(LANGS).length) n.clear(); // tutte scelte = "Tutte"
+    setFilter(n);
+  }, !pools[l]);
+}
+function setFilter(n) {
+  active = n;
+  try { localStorage.setItem('filtro-lingue', JSON.stringify([...active])); } catch (e) {}
+  bag = null; rebuildBag();
+  renderFilters(); updateCount();
+  if (total) deal();
+}
+
+/* ---------- avvio ---------- */
+function updateCount(loading) {
+  total = activeLangs().reduce((s, l) => s + pools[l].length, 0);
+}
+renderFilters();
+btn.addEventListener('click', deal);
+
+(async () => {
+  let started = false, pending = Object.keys(LANGS).length, failed = 0;
+  await Promise.all(Object.keys(LANGS).map(async lang => {
+    try {
+      pools[lang] = await loadLang(lang);
+      bag = null; // ricostruisci l'estrazione includendo la nuova lingua
+    } catch (e) { failed++; }
+    pending--;
+    updateCount(pending > 0);
+    renderFilters();
+  }));
+  // distribuisci solo quando tutte le lingue sono arrivate, così la prima mano è davvero mista
+  if (!total && active.size) { active = new Set(); updateCount(); renderFilters(); }
+  if (total) { started = true; statusEl.remove(); btn.disabled = false; deal(); }
+  if (!started) statusEl.textContent = 'Non riesco a caricare le carte. Controlla la connessione e riapri l’app.';
+})();
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
