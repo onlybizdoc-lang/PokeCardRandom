@@ -64,6 +64,24 @@
   .top { position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; transition: opacity .2s; z-index: 2; }
   .top span { font-size: 13px; color: #c4c8d0; background: rgba(255,255,255,.12); padding: 6px 10px; border-radius: 999px; }
   #close { background: rgba(255,255,255,.15); color: #fff; border: 0; width: 42px; height: 42px; border-radius: 50%; font-size: 24px; line-height: 1; cursor: pointer; }
+
+  /* Schermata iniziale */
+  @font-face { font-family: 'Logo'; src: url(luckiest.ttf) format('truetype'); font-display: swap; }
+  #splash { position: fixed; inset: 0; z-index: 30; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; transition: opacity .4s; }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  #wall { position: absolute; inset: -40px; display: flex; gap: 10px; justify-content: center; filter: blur(7px); transform: scale(1.1); }
+  #wall .col { flex: 1; max-width: 160px; display: flex; flex-direction: column; gap: 10px; animation: up 40s linear infinite; }
+  #wall .col:nth-child(even) { animation-name: down; }
+  #wall .col:nth-child(3n) { animation-duration: 52s; }
+  #wall .col:nth-child(3n+1) { animation-duration: 34s; }
+  #wall img { width: 100%; aspect-ratio: 63 / 88; border-radius: 8px; display: block; background: var(--panel); }
+  @keyframes up { to { transform: translateY(-50%); } }
+  @keyframes down { from { transform: translateY(-50%); } to { transform: translateY(0); } }
+  #splash .shade { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+  #go { position: relative; border: 0; border-radius: 999px; padding: 18px 40px; font-size: 19px; font-weight: 800; background: var(--accent); color: var(--accent-text); cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+  #go:active { transform: scale(.96); }
+  #go:disabled { opacity: .6; }
+  #logo { position: relative; margin: 0; font-family: 'Logo', Impact, sans-serif; font-weight: 400; font-size: clamp(40px, 12vw, 88px); line-height: 1; text-align: center; color: #ffcb05; letter-spacing: 2px; -webkit-text-stroke: 8px #3b4cca; paint-order: stroke fill; text-shadow: 0 6px 0 #1f2a80, 0 10px 24px rgba(0,0,0,.6); }
 </style>
 </head>
 <body>
@@ -81,6 +99,12 @@
   <div id="stage"><img id="big" alt="" draggable="false"></div>
   <div class="top"><span id="pos"></span><button id="close" aria-label="Chiudi">×</button></div>
   <div id="info"></div>
+</div>
+
+<div id="splash">
+  <div id="wall"></div><div class="shade"></div>
+  <button id="go" disabled>Carico le carte…</button>
+  <h1 id="logo">PokèRandom</h1>
 </div>
 
 <script>
@@ -301,6 +325,28 @@ function setFilter(n) {
   if (total) deal();
 }
 
+
+/* ---------- schermata iniziale ---------- */
+document.body.classList.add('locked');
+function buildWall() {
+  const wall = $('wall');
+  const cols = Math.max(3, Math.min(6, Math.round(innerWidth / 130)));
+  for (let c = 0; c < cols; c++) {
+    const col = document.createElement('div');
+    col.className = 'col';
+    const imgs = [];
+    for (let k = 0; k < 8; k++) { const p = pick(); imgs.push(img(p, 'low')); }
+    for (const src of [...imgs, ...imgs]) { const im = new Image(); im.alt = ''; im.src = src; col.appendChild(im); }
+    col.style.animationDelay = (-Math.random() * 20) + 's';
+    wall.appendChild(col);
+  }
+}
+$('go').addEventListener('click', () => {
+  $('splash').classList.add('hide');
+  document.body.classList.remove('locked');
+  setTimeout(() => $('splash').remove(), 450);
+});
+
 /* ---------- avvio ---------- */
 function updateCount(loading) {
   total = activeLangs().reduce((s, l) => s + pools[l].length, 0);
@@ -321,8 +367,8 @@ btn.addEventListener('click', deal);
   }));
   // distribuisci solo quando tutte le lingue sono arrivate, così la prima mano è davvero mista
   if (!total && active.size) { active = new Set(); updateCount(); renderFilters(); }
-  if (total) { started = true; statusEl.remove(); btn.disabled = false; deal(); }
-  if (!started) statusEl.textContent = 'Non riesco a caricare le carte. Controlla la connessione e riapri l’app.';
+  if (total) { started = true; statusEl.remove(); btn.disabled = false; deal(); buildWall(); $('go').disabled = false; $('go').textContent = 'Scopri le carte'; }
+  if (!started) $('go').textContent = 'Errore di rete'; statusEl.textContent = 'Non riesco a caricare le carte. Controlla la connessione e riapri l’app.';
 })();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

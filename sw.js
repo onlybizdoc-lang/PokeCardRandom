@@ -1,6 +1,6 @@
 // Service worker minimo: rende l'app installabile e tiene in cache la "scocca" dell'app.
-const SHELL = 'shell-v2';
-const FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+const SHELL = 'shell-v3';
+const FILES = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'luckiest.ttf'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)));
