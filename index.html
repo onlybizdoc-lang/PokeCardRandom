@@ -30,7 +30,12 @@
   h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
   #count { font-size: 12px; color: var(--muted); text-align: right; }
   #grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 720px; margin: 0 auto; }
-  .card { position: relative; aspect-ratio: 63 / 88; border-radius: var(--radius); background: var(--panel); overflow: hidden; border: 0; padding: 0; cursor: pointer; }
+  .card { position: relative; aspect-ratio: 63 / 88; border-radius: var(--radius); background: var(--panel); overflow: hidden; border: 3px solid var(--rc, transparent); padding: 0; cursor: pointer; transition: border-color .3s, box-shadow .3s; }
+  .card[class*="r-"]:not(.r-common):not(.r-uncommon) { box-shadow: 0 0 12px var(--rc); }
+  .card.r-secret { background: linear-gradient(120deg, #ff4fd8, #ffcb05, #3be8ff, #9b6bff, #ff4fd8) border-box; background-size: 300% 300%; animation: rainbow 4s linear infinite; }
+  @keyframes rainbow { to { background-position: 300% 0; } }
+  .r-common { --rc: #8b92a3; } .r-uncommon { --rc: #3ecf6e; } .r-rare { --rc: #3b9bff; }
+  .r-holo { --rc: #a463ff; } .r-ultra { --rc: #ffcb05; } .r-secret { --rc: #ff4fd8; }
   .card img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .25s; }
   .card img.ok { opacity: 1; }
   .card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.06) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 1.2s infinite; pointer-events: none; }
@@ -56,7 +61,7 @@
   #bg { position: absolute; inset: -60px; background-size: cover; background-position: center; filter: blur(28px); transform: scale(1.1); }
   #shade { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
   #stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px); }
-  #big { max-width: 100%; max-height: 100%; border-radius: 16px; transform-origin: center; will-change: transform; user-select: none; -webkit-user-drag: none; }
+  #big { border: 4px solid var(--rc, transparent); box-shadow: 0 0 22px var(--rc, transparent); max-width: 100%; max-height: 100%; border-radius: 16px; transform-origin: center; will-change: transform; user-select: none; -webkit-user-drag: none; }
   #info { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 16px calc(env(safe-area-inset-bottom) + 16px); background: linear-gradient(transparent, rgba(0,0,0,.85) 45%); text-align: center; transition: opacity .2s; }
   #modal.clean #info, #modal.clean .top { opacity: 0; pointer-events: none; }
   #info .name { font-size: 20px; font-weight: 700; }
@@ -159,6 +164,33 @@ async function loadLang(lang) {
   return d;
 }
 
+
+/* ---------- rarità → bordo ---------- */
+function tierOf(r) {
+  const s = String(r || '').toLowerCase().trim();
+  if (!s || s === 'none') return null;
+  const exact = { hr: 'secret', sar: 'secret', ur: 'ultra', ar: 'ultra', ssr: 'ultra', sr: 'holo', rr: 'holo', rrr: 'holo', r: 'rare', u: 'uncommon', c: 'common' };
+  if (exact[s]) return exact[s];
+  if (/secret|hyper|segret|crown|special illustration|special art|シークレット|スペシャルアート|ハイパー|隱藏|隐藏|王冠/.test(s)) return 'secret';
+  if (/ultra|illustration|art rare|アート|ウルトラ|shiny|radiant|amazing|ace spec|イラスト|超/.test(s)) return 'ultra';
+  if (/holo|double|doppia|ダブル|スーパー|super|mega|vmax|vstar|\bex\b|\bgx\b|\bv\b|ホロ|雙/.test(s)) return 'holo';
+  if (/rare|rara|レア|稀有|珍/.test(s)) return 'rare';
+  if (/uncommon|non comune|アンコモン|非普通/.test(s)) return 'uncommon';
+  if (/common|comune|コモン|普通/.test(s)) return 'common';
+  return null;
+}
+const details = new Map(); // "lang/id" → promessa con i dati della carta
+function getDetail(c) {
+  const k = c.lang + '/' + c.id;
+  if (!details.has(k)) details.set(k, fetch(`${API}/${c.lang}/cards/${encodeURIComponent(c.id)}`).then(r => { if (!r.ok) throw 0; return r.json(); }).catch(() => { details.delete(k); return null; }));
+  return details.get(k);
+}
+const TIERS = ['common', 'uncommon', 'rare', 'holo', 'ultra', 'secret'];
+function paintTier(el, tier) {
+  el.classList.remove(...TIERS.map(t => 'r-' + t));
+  if (tier) el.classList.add('r-' + tier);
+}
+
 /* ---------- estrazione casuale ---------- */
 const activeLangs = () => Object.keys(pools).filter(l => !active.size || active.has(l));
 function rebuildBag() {
@@ -191,7 +223,12 @@ function deal() {
     badge.className = 'lang';
     const im = new Image();
     im.alt = ''; im.decoding = 'async';
-    const show = () => { badge.textContent = LANGS[hand[slot].lang]; im.src = img(hand[slot], 'low'); };
+    const show = () => {
+      const c = hand[slot];
+      badge.textContent = LANGS[c.lang]; im.src = img(c, 'low');
+      paintTier(b, null);
+      getDetail(c).then(d => { if (hand[slot] === c) paintTier(b, tierOf(d && d.rarity)); });
+    };
     im.onload = () => { im.classList.add('ok'); b.classList.add('loaded'); };
     im.onerror = () => { hand[slot] = pick(); show(); }; // immagine mancante → un'altra carta
     show();
@@ -221,10 +258,12 @@ async function openCard(i) {
   hi.onload = () => { if (hand[current] === c) big.src = hi.src; };
   hi.src = img(c, 'high');
   info.innerHTML = '<div class="meta">…</div>';
+  paintTier(big, null);
   try {
-    const r = await fetch(`${API}/${c.lang}/cards/${encodeURIComponent(c.id)}`);
-    const d = await r.json();
+    const d = await getDetail(c);
+    if (!d) throw 0;
     if (hand[current] !== c) return;
+    paintTier(big, tierOf(d.rarity));
     const set = d.set || {};
     const tot = set.cardCount ? (set.cardCount.official || set.cardCount.total) : '';
     const q = encodeURIComponent(`${d.name} ${set.name || ''}`);
@@ -234,7 +273,7 @@ async function openCard(i) {
       <a href="https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${q}" target="_blank" rel="noopener">Cerca su Cardmarket →</a>`;
   } catch (e) { if (hand[current] === c) info.innerHTML = ''; }
 }
-function closeModal() { modal.classList.remove('open'); document.body.classList.remove('locked'); big.removeAttribute('src'); $('bg').style.backgroundImage = ''; }
+function closeModal() { modal.classList.remove('open'); document.body.classList.remove('locked'); big.removeAttribute('src'); paintTier(big, null); $('bg').style.backgroundImage = ''; }
 $('close').addEventListener('click', e => { e.stopPropagation(); closeModal(); });
 document.addEventListener('keydown', e => {
   if (!modal.classList.contains('open')) return;
