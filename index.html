@@ -187,7 +187,7 @@ const RARITIES = {
   ultra:    ['Ultra Rare', 'Illustration rare', 'Shiny rare', 'Shiny rare V', 'Shiny rare VMAX', 'Shiny Ultra Rare', 'Radiant Rare', 'Amazing Rare', 'ACE SPEC Rare', 'Full Art Trainer', 'Classic Collection', 'Two Star', 'One Shiny', 'Futuristic Rare', 'RGB Rare', 'Mega Attack Rare'],
   secret:   ['Secret Rare', 'Hyper rare', 'Special illustration rare', 'Three Star', 'Two Shiny', 'Crown', 'Mega Hyper Rare']
 };
-const TIER_LABELS = { common: 'Comuni', uncommon: 'Non com.', rare: 'Rare', holo: 'Holo', ultra: 'Ultra', secret: 'Segrete' };
+const TIER_LABELS = { common: 'Comuni', uncommon: 'N.C.', rare: 'Rare', holo: 'Holo', ultra: 'Ultra', secret: 'Segrete' };
 const RARITY_TIER = {};
 for (const t in RARITIES) for (const v of RARITIES[t]) RARITY_TIER[v.toLowerCase()] = t;
 function tierOf(r) {
