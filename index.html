@@ -52,13 +52,14 @@
   .tchip.all::before { background: conic-gradient(#ff4fd8, #ffcb05, #3ecf6e, #3b9bff, #a463ff, #ff4fd8); }
   #toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%); z-index: 8; background: rgba(0,0,0,.85); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .25s; }
   #toast.on { opacity: 1; }
-  #filters { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 84px); z-index: 5; display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px; padding: 0 12px; pointer-events: none; }
+  #bar { position: fixed; top: 0; left: 0; right: 0; height: var(--full, 100%); z-index: 5; pointer-events: none; }
+  #filters { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 84px); z-index: 5; display: flex; flex-wrap: nowrap; justify-content: center; gap: 8px; padding: 0 12px; pointer-events: none; }
   #filters .chip { pointer-events: auto; box-shadow: 0 2px 10px rgba(0,0,0,.45); }
   .chip { flex: none; border: 1px solid #343846; background: var(--panel); color: var(--text); border-radius: 999px; padding: 6px 14px; font-size: 20px; line-height: 1.2; font-weight: 600; cursor: pointer; }
   .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   .chip:disabled { opacity: .45; }
   #status { text-align: center; color: var(--muted); font-size: 14px; margin: 24px 8px; }
-  #refresh { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 18px); border: 0; border-radius: 999px; padding: 16px 36px; font-size: 17px; font-weight: 700; background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 24px rgba(0,0,0,.45); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  #refresh { pointer-events: auto; position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 18px); border: 0; border-radius: 999px; padding: 16px 36px; font-size: 17px; font-weight: 700; background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 24px rgba(0,0,0,.45); cursor: pointer; display: flex; align-items: center; gap: 8px; }
   #refresh:active { transform: translateX(-50%) scale(.96); }
   #refresh:disabled { opacity: .6; }
   #refresh svg { width: 20px; height: 20px; }
@@ -66,7 +67,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Carta a schermo intero */
-  #modal { position: fixed; inset: 0; bottom: calc(env(safe-area-inset-bottom) * -1); min-height: 100lvh; background: #000; display: none; z-index: 10; touch-action: none; }
+  #modal { position: fixed; top: 0; left: 0; right: 0; height: var(--full, 100%); background: #000; display: none; z-index: 10; touch-action: none; }
   #modal.open { display: block; }
   #bg { position: absolute; inset: -60px; background-size: cover; background-position: center; filter: blur(28px); transform: scale(1.1); }
   #shade { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
@@ -83,7 +84,7 @@
 
   /* Schermata iniziale */
   @font-face { font-family: 'Logo'; src: url(luckiest.ttf) format('truetype'); font-display: swap; }
-  #splash { position: fixed; inset: 0; bottom: calc(env(safe-area-inset-bottom) * -1); min-height: 100lvh; z-index: 30; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; transition: opacity .4s; }
+  #splash { position: fixed; top: 0; left: 0; right: 0; height: var(--full, 100%); z-index: 30; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; transition: opacity .4s; }
   #splash.hide { opacity: 0; pointer-events: none; }
   #wall { position: absolute; inset: -40px; display: flex; gap: 10px; justify-content: center; filter: blur(4px); transform: scale(1.1); }
   #wall .col { flex: 1; max-width: 160px; display: flex; flex-direction: column; gap: 10px; animation: up 40s linear infinite; }
@@ -103,14 +104,16 @@
 </head>
 <body>
 <div id="tfilters"></div>
-<div id="filters"></div>
 <div id="grid"></div>
 <div id="status">Carico le carte…</div>
 
-<button id="refresh" disabled>
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-  Aggiorna
-</button>
+<div id="bar">
+  <div id="filters"></div>
+  <button id="refresh" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    Aggiorna
+  </button>
+</div>
 
 <div id="toast"></div>
 
@@ -128,6 +131,12 @@
 </div>
 
 <script>
+// App aggiunta alla Home (iOS): l'altezza "fissa" può fermarsi sopra la barra home. Uso l'altezza vera dello schermo.
+(function () {
+  const standalone = navigator.standalone || (matchMedia && matchMedia('(display-mode: standalone)').matches);
+  const set = () => document.documentElement.style.setProperty('--full', standalone ? Math.max(innerHeight, screen.height) + 'px' : '100%');
+  set(); addEventListener('resize', set); addEventListener('orientationchange', () => setTimeout(set, 200));
+})();
 const API = 'https://api.tcgdex.net/v2';
 const ASSETS = 'https://assets.tcgdex.net/';
 // Lingue incluse (il cinese di TCGdex con immagini è quello tradizionale)
