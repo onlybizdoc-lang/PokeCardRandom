@@ -505,6 +505,15 @@ function buildWall() {
     wall.appendChild(col);
   }
 }
+const VERSION = 'v9';
+$('logo').addEventListener('click', () => {
+  const r = $('splash').getBoundingClientRect();
+  const sb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--full'));
+  const probe = document.createElement('div'); probe.style.cssText = 'position:fixed;bottom:0;height:0;padding-bottom:env(safe-area-inset-bottom)';
+  document.body.appendChild(probe); const safe = probe.offsetHeight; probe.remove();
+  const h = $('hint'); h.style.display = 'block';
+  h.textContent = `${VERSION} · standalone=${!!navigator.standalone} · inner=${innerWidth}x${innerHeight} · screen=${screen.width}x${screen.height} · full=${sb} · splash=${Math.round(r.height)} · safeBottom=${safe}`;
+});
 $('go').addEventListener('click', () => {
   $('splash').classList.add('hide');
   document.body.classList.remove('locked');
