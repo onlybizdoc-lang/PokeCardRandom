@@ -43,7 +43,17 @@
   .card.loaded::after { display: none; }
   .lang { position: absolute; top: 4px; right: 4px; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 6px; background: rgba(0,0,0,.7); color: #fff; letter-spacing: .3px; pointer-events: none; }
   @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
-  #tfilters { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; max-width: 520px; margin: 0 auto; width: 100%; }
+  #tfilters { position: relative; z-index: 6; display: flex; gap: 8px; max-width: 720px; margin: 0 auto; width: 100%; }
+  .dd { position: relative; }
+  .ddbtn { display: flex; align-items: center; gap: 8px; border: 1.5px solid #343846; background: var(--panel); color: var(--text); border-radius: 999px; padding: 9px 14px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .ddbtn.active { border-color: var(--accent); }
+  .ddbtn .sum { color: var(--muted); font-weight: 600; }
+  .ddbtn.active .sum { color: var(--accent); }
+  .ddbtn .arrow { width: 10px; height: 10px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s; }
+  .dd.open .ddbtn .arrow { transform: translateY(2px) rotate(-135deg); }
+  .ddpanel { display: none; position: absolute; top: calc(100% + 8px); left: 0; width: min(calc(100vw - 24px), 520px); background: #1d2029; border: 1px solid #343846; border-radius: 16px; padding: 10px; box-shadow: 0 12px 36px rgba(0,0,0,.6); }
+  .dd.open .ddpanel { display: block; }
+  .ddpanel .grid7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
   .tchip { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; border: 1.5px solid #343846; background: var(--panel); color: var(--muted); border-radius: 12px; padding: 8px 1px 7px; font-size: 9.5px; letter-spacing: -.1px; font-weight: 700; line-height: 1; white-space: nowrap; cursor: pointer; }
   .tchip::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--rc, var(--muted)); }
   .tchip.r-secret::before { background: linear-gradient(120deg, #ff4fd8, #ffcb05, #3be8ff); }
@@ -518,13 +528,26 @@ async function setTierFilter(n) {
 }
 function renderTierFilters() {
   const f = $('tfilters');
+  const wasOpen = f.querySelector('.dd.open') !== null;
   f.innerHTML = '';
+  const dd = document.createElement('div');
+  dd.className = 'dd' + (wasOpen ? ' open' : '');
+  const btn = document.createElement('button');
+  btn.className = 'ddbtn' + (tierActive.size ? ' active' : '');
+  const names = Object.keys(RARITIES).filter(t => tierActive.has(t)).map(t => TIER_LABELS[t]);
+  btn.innerHTML = `Rarità <span class="sum">${tierActive.size ? esc(names.length > 2 ? names.length + ' scelte' : names.join(', ')) : 'Tutte'}</span><i class="arrow"></i>`;
+  btn.addEventListener('click', e => { e.stopPropagation(); dd.classList.toggle('open'); });
+  const panel = document.createElement('div');
+  panel.className = 'ddpanel';
+  panel.addEventListener('click', e => e.stopPropagation());
+  const grid = document.createElement('div');
+  grid.className = 'grid7';
   const mk = (cls, label, on, onClick) => {
     const b = document.createElement('button');
     b.className = 'tchip ' + cls + (on ? ' on' : '');
     b.textContent = label;
     b.addEventListener('click', onClick);
-    f.appendChild(b);
+    grid.appendChild(b);
   };
   mk('all', 'Tutte', !tierActive.size, () => setTierFilter(new Set()));
   for (const t in RARITIES) mk('r-' + t, TIER_LABELS[t], tierActive.has(t), () => {
@@ -533,7 +556,11 @@ function renderTierFilters() {
     if (n.size === Object.keys(RARITIES).length) n.clear();
     setTierFilter(n);
   });
+  panel.appendChild(grid);
+  dd.append(btn, panel);
+  f.appendChild(dd);
 }
+document.addEventListener('click', () => { const o = document.querySelector('#tfilters .dd.open'); if (o) o.classList.remove('open'); });
 
 /* ---------- filtro lingua ---------- */
 try { active = new Set(JSON.parse(localStorage.getItem('filtro-lingue')) || []); } catch (e) {}
@@ -592,7 +619,7 @@ function buildWall() {
     wall.appendChild(col);
   }
 }
-const VERSION = 'v13';
+const VERSION = 'v14';
 $('logo').addEventListener('click', () => {
   const r = $('splash').getBoundingClientRect();
   const sb = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--full'));
